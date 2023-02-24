@@ -1,0 +1,284 @@
+module D2000-procmon {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/system/procmon";
+
+  prefix "oc-proc";
+
+  // typedef statements
+  typedef counter64 {
+    type uint64;
+    description
+      "A 64-bit counter. A counter value is a monotonically increasing
+      value which is used to express a count of a number of
+      occurrences of a particular event or entity. When a counter64
+      reaches its maximum value, 2^64-1, it loops to zero.
+      Discontinuities in a counter are generally triggered only when
+      the counter is reset to zero, through operator or system
+      intervention.";
+  }
+
+  typedef timeticks64 {
+    type uint64;
+    units "nanoseconds";
+    description
+     "The timeticks64 represents the time, modulo 2^64 in
+     nanoseconds between two epochs. The leaf using this
+     type must define the epochs that tests are relative to.";
+  }
+
+  typedef percentage {
+    type uint8 {
+      range "0..100";
+    }
+    description
+      "Integer indicating a percentage value";
+  }
+
+  // grouping statements
+  grouping procmon-processes-top {
+    description
+      "Top level grouping for attributes for processes.";
+
+    container processes {
+      description
+        "Parameters related to all monitored processes";
+
+      list process {
+        key "pid";
+        config false;
+        description
+          "List of monitored processes";
+
+        leaf pid {
+          type leafref {
+            path "../state/pid";
+          }
+          description
+            "Reference to the process pid key";
+        }
+
+        container state {
+          config false;
+          description
+            "State parameters related to monitored processes";
+
+          uses procmon-process-attributes-state;
+        }
+      }
+    }
+  }
+
+  grouping procmon-process-attributes-state {
+    description
+      "Attributes state definitions for a process";
+
+    leaf pid {
+      type uint64;
+      description
+        "The process pid";
+    }
+
+    leaf name {
+      type string;
+      description
+        "The process name";
+    }
+
+    leaf-list args {
+      type string;
+      description
+        "Current process command line arguments.  Arguments with
+        a parameter (e.g., --option 10  or -option=10) should be
+        represented as a single element of the list with the
+        argument name and parameter together.  Flag arguments, i.e.,
+        those without a parameter should also be in their own list
+        element.";
+    }
+
+    leaf start-time {
+      type timeticks64;
+      description
+        "The time at which this process started,
+        relative to the UNIX epoch.  The system must be
+        synchronized such that the start-time can be
+        reported accurately, otherwise it should not be reported.";
+     }
+
+    leaf cpu-usage-user {
+      type counter64;
+      units "nanoseconds";
+      description
+        "CPU time consumed by this process in user mode in
+        nanoseconds.";
+    }
+
+    leaf cpu-usage-system {
+      type counter64;
+      units "nanoseconds";
+      description
+        "CPU time consumed by this process in kernel mode.";
+    }
+
+    leaf cpu-utilization {
+      type percentage;
+      description
+        "The percentage of CPU that is being used by the process.";
+    }
+
+    leaf memory-usage {
+      type uint64;
+      units "bytes";
+      description
+        "Bytes allocated and still in use by the process";
+    }
+
+    leaf memory-utilization {
+      type percentage;
+      description
+        "The percentage of RAM that is being used by the process.";
+    }
+  }
+
+  uses procmon-processes-top;
+
+  // augment statements
+
+  // rpc statements
+  rpc get_all_processes_info {
+    description
+    "Get all processes information.";
+    output {
+      list process {
+        key "pid";
+        leaf pid {
+          type uint64;
+          description
+          "Process ID.";
+        }
+
+        leaf name {
+          type string;
+          description
+          "Process name.";
+        }
+
+        leaf-list args {
+          type string;
+          description
+          "Current process command line arguments.";
+        }
+
+        leaf start-time {
+          type timeticks64;
+          description
+          "The time at which this process started.";
+        }
+
+        leaf cpu-usage-user {
+          type counter64;
+          description
+          "CPU time consumed by this process in user mode in
+           nanoseconds.";
+        }
+
+        leaf cpu-usage-system {
+          type counter64;
+          description
+          "CPU time consumed by this process in kernel mode.";
+        }
+
+        leaf cpu-utilization {
+          type percentage;
+          description
+          "The percentage of RAM that is being used by the process.";
+        }
+
+        leaf memory-usage {
+          type uint64;
+          description
+          "Bytes allocated and still in use by the process.";
+        }
+
+        leaf memory-utilization {
+          type percentage;
+          description
+          "The percentage of RAM that is being used by the process.";
+        }
+      }
+    }
+  }
+
+  rpc get_single_process_infor {
+    description
+    "Get single process informaiton";
+    input {
+      leaf pid{
+        type uint64;
+        description
+        "Process pid.";
+      }
+    }
+
+    output {
+      leaf pid {
+          type uint64;
+          description
+          "Process ID.";
+        }
+
+        leaf name {
+          type string;
+          description
+          "Process name.";
+        }
+
+        leaf-list args {
+          type string;
+          description
+          "Current process command line arguments.";
+        }
+
+        leaf start-time {
+          type timeticks64;
+          description
+          "The time at which this process started.";
+        }
+
+        leaf cpu-usage-user {
+          type counter64;
+          description
+          "CPU time consumed by this process in user mode in
+           nanoseconds.";
+        }
+
+        leaf cpu-usage-system {
+          type counter64;
+          description
+          "CPU time consumed by this process in kernel mode.";
+        }
+
+        leaf cpu-utilization {
+          type percentage;
+          description
+          "The percentage of RAM that is being used by the process.";
+        }
+
+        leaf memory-usage {
+          type uint64;
+          description
+          "Bytes allocated and still in use by the process.";
+        }
+
+        leaf memory-utilization {
+          type percentage;
+          description
+          "The percentage of RAM that is being used by the process.";
+        }
+    }
+  }
+
+  // notification statements
+}

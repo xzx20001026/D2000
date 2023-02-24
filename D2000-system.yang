@@ -1,0 +1,567 @@
+module D2000-system {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/system";
+
+  prefix "D2000-sys";
+
+  // import some basic types
+  import D2000-procmon { prefix oc-proc; }
+
+  // meta
+  description
+    "Model for managing system-wide services and functions on
+    network devices.";
+
+  revision "2023-02-21" {
+    description
+      "DELETE;";
+    reference "0.17.0";
+  }
+
+  // extension statements
+  // feature statements
+  // identity statements
+  // typedef statements
+  typedef percentage {
+    type uint8 {
+      range "0..100";
+    }
+    description
+      "Integer indicating a percentage value";
+  }
+  // grouping statements
+
+  // global module
+  grouping system-global-state {
+    description
+      "Global operational state data for the system";
+
+    leaf software-version {
+        type string;
+        description
+          "Operating system version of the currently active controller
+          of the device.  It is required that this value matches the
+          value of the state/software-version leaf in the component
+          of type OPERATING_SYSTEM.";
+    }
+
+  }
+  
+  // memory module
+  grouping system-memory-config {
+    description
+      "Configuration data for system memory";
+  }
+
+  grouping system-memory-state {
+    description
+      "Operational state data for system memory";
+
+    leaf physical {
+      type uint64;
+      units bytes;
+      // TODO: consider making units in megabytes
+      description
+        "Reports the total physical memory available on the
+        system.";
+    }
+
+    leaf reserved {
+      type uint64;
+      units bytes;
+      description
+        "Memory reserved for system use";
+    }
+
+    leaf used {
+      type uint64;
+      units bytes;
+      description
+        "Memory that has been used and not available for allocation.";
+    }
+
+    leaf free {
+      type uint64;
+      units bytes;
+      description
+        "Memory that is not used and is available for allocation.";
+    }
+  }
+
+  grouping system-memory-top {
+    description
+      "Top-level grouping for system memory data definitions";
+
+    container memory {
+      description
+        "Top-level container for system memory data";
+
+      container config {
+        description
+          "Configuration data for system memory";
+
+        uses system-memory-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for system memory";
+
+        uses system-memory-config;
+        uses system-memory-state;
+      }
+    }
+  }
+
+  // cpu module
+  grouping system-cpu-state {
+    description
+      "Operational state data for the system CPU(s)";
+
+    leaf index {
+      type union {
+        type enumeration {
+          enum ALL {
+            description
+              "Index value indicating all CPUs in the system";
+          }
+        }
+        type uint32;
+      }
+      description
+        "The CPU index for each processor core on the system.  On a
+        single-core system, the index should be zero.  The ALL
+        index signifies an aggregation of the CPU utilization
+        statistics over all cores in the system.";
+    }
+
+    leaf total {
+      type percentage;
+      description
+        "Total CPU utilization.";
+    }
+
+    leaf user {
+      type percentage;
+      description
+        "Percentage of CPU time spent running in user space.";
+    }
+
+    leaf kernel {
+      type percentage;
+      description
+        "Percentage of CPU time spent running in kernel space.";
+    }
+
+    leaf nice {
+      type percentage;
+      description
+        "Percentage of CPU time spent running low-priority (niced)
+        user processes.";
+    }
+
+    leaf idle {
+      type percentage;
+      description
+        "Percentage of CPU time spent idle.";
+    }
+
+    leaf wait {
+      type percentage;
+      description
+        "Percentage of CPU time spent waiting for I/O.";
+    }
+
+    leaf hardware-interrupt {
+      type percentage;
+      description
+        "Percentage of CPU time spent servicing hardware interrupts.";
+    }
+
+    leaf software-interrupt {
+      type percentage;
+      description
+        "Percentage of CPU time spent servicing software interrupts";
+    }
+  }
+
+  grouping system-cpu-top {
+    description
+      "Top-level grouping for system CPU data";
+
+    container cpus {
+      config false;
+      description
+        "Enclosing container for the list of CPU cores on the
+        system";
+
+      list cpu {
+        key "index";
+        description
+          "List of CPU cores on the system (including logical CPUs
+          on hyperthreaded systems), keyed by either a numerical
+          index, or the ALL value for an entry representing the
+          aggregation across all CPUs.";
+
+        leaf index {
+          type leafref {
+            path "../state/index";
+          }
+          description
+            "Reference to list key";
+        }
+
+        container state {
+          description
+            "Operational state data for the system CPU(s)";
+
+          uses system-cpu-state;
+        }
+      }
+    }
+  }
+
+  // system module
+  grouping system-top {
+    description
+      "Top level system data containers";
+
+    container system {
+      description
+        "Enclosing container for system-related configuration and
+        operational state data";
+
+      container state {
+        config false;
+        description "Global operational state data for the system";
+
+        uses system-global-state;
+      }
+
+      uses system-memory-top;
+      uses system-cpu-top;
+      uses oc-proc:procmon-processes-top;
+    }
+  }
+
+  // data definition statements
+  uses system-top;
+  
+  // rpcs
+  rpc get_software_version {
+    description
+      "Get the version of the currently active controller of the device.";
+    output {
+      leaf software_version {
+        type string;
+        description
+        "Operating system version of the currently active controller
+         of the device.";
+      }
+    }
+  }
+
+  rpc get_memory_physical {
+    description
+    "Get the size of total pyhsical memory.";
+    output {
+      leaf memory-physical {
+        type uint64;
+        units bytes;
+        description
+        "The size of total physical memory.";
+      }
+    }
+  }
+
+  rpc get_memory_reserved {
+    description
+    "Get the size of reserved memory for system use.";
+    output {
+      leaf memory-reserved {
+        type uint64;
+        units bytes;
+        description
+        "The size of reserved memory for system use.";
+      }
+    }
+  }
+
+  rpc get_memory_used {
+    description
+    "Get the size of memory that has been used and can not be allocated.";
+    output {
+      leaf memory-used {
+        type uint64;
+        units bytes;
+        description
+        "The size of used memory that has been used and can not be allocated.";
+      }
+    }
+  }
+
+  rpc get_memory_free {
+    description
+      "Get the size of free memory that can be allocated ";
+    output {
+      leaf memory-free {
+        type uint64;
+        units bytes;
+        description
+          "The size of free memory that can be allocated.";
+      }
+    }
+  }
+
+  rpc get_cpu_index {
+    description
+    "Return the CPU index for each processor on the system.";
+    output {
+      leaf-list index {
+        type uint32;
+        description
+        "The CPU index for each processor on the system";
+      }
+    }
+  }
+
+  rpc get_cpu_total {
+    description
+    "Return the percentage of total CPU utilization.";
+    input {
+      leaf index {
+        type union {
+          type enumeration {
+            enum ALL {
+              description
+              "Get the percentage of total CPU utilization for all CPUs in the system.";
+            }
+          }
+          type uint32;
+        }
+        mandatory true;
+        description
+        "Use 'ALL' to query the total for all CPUs otherwise for the single core.";
+      }
+    }
+
+    output {
+      leaf total {
+        type percentage;
+        description
+        "Total CPU utilization.";
+      }
+    }
+  }
+
+  rpc get_cpu_user {
+    description
+    "Return the percentage of CPU time spent running in user space.";
+    input {
+      leaf index {
+        type union {
+          type enumeration {
+            enum ALL {
+              description
+              "Get the percentage of CPU time spent running in user space for all CPUs in the system.";
+            }
+          }
+          type uint32;
+        }
+        mandatory true;
+        description
+        "Use 'ALL' to query the information of all CPUs otherwise for the single core.";
+      }
+    }
+
+    output {
+      leaf user {
+        type percentage;
+        description
+        "Percentage of CPU time spent running in user space.";
+      }
+    }
+  }
+
+  rpc get_cpu_kernel {
+    description
+    "Return the percentage of CPU time spent running in kernel space.";
+    input {
+      leaf index {
+        type union {
+          type enumeration {
+            enum ALL {
+              description
+              "Get the percentage of CPU time spent running in kernel space for all CPUs in the system.";
+            }
+          }
+          type uint32;
+        }
+        mandatory true;
+        description
+        "Use 'ALL' to query the information of all CPUs otherwise for the single core.";
+      }
+    }
+
+    output {
+      leaf kernel {
+        type percentage;
+        description
+        "Percentage of CPU time spent running in kernel space.";
+      }
+    }
+  }
+
+  rpc get_cpu_nice {
+    description
+    "Return the percentage of  CPU time spent running low-priority (niced) user processes.";
+    input {
+      leaf index {
+        type union {
+          type enumeration {
+            enum ALL {
+              description
+              "Get the percentage of CPU time spent running low-priority (niced) user processes.";
+            }
+          }
+          type uint32;
+        }
+        mandatory true;
+        description
+        "Use 'ALL' to query the information of all CPUs otherwise for the single core.";
+      }
+    }
+
+    output {
+      leaf nice {
+        type percentage;
+        description
+        "Percentage of CPU time spent running low-priority (niced) user processes.";
+      }
+    }
+  }
+
+  rpc get_cpu_idle {
+    description
+    "Return the percentage of  CPU time spent idle.";
+    input {
+      leaf index {
+        type union {
+          type enumeration {
+            enum ALL {
+              description
+              "Get the percentage of CPU time spent idle.";
+            }
+          }
+          type uint32;
+        }
+        mandatory true;
+        description
+        "Use 'ALL' to query the information of all CPUs otherwise for the single core.";
+      }
+    }
+
+    output {
+      leaf idle {
+        type percentage;
+        description
+        "Percentage of CPU time spent idle.";
+      }
+    }
+  }
+
+  rpc get_cpu_wait {
+    description
+    "Return the percentage of  CPU time spent waiting for I/O.";
+    input {
+      leaf index {
+        type union {
+          type enumeration {
+            enum ALL {
+              description
+              "Get the percentage of CPU time spent waiting for I/O.";
+            }
+          }
+          type uint32;
+        }
+        mandatory true;
+        description
+        "Use 'ALL' to query the information of all CPUs otherwise for the single core.";
+      }
+    }
+
+    output {
+      leaf wait {
+        type percentage;
+        description
+        "Percentage of CPU time spent waiting for I/O.";
+      }
+    }
+  }
+
+  rpc get_cpu_hardware_interrupt {
+    description
+    "Return the percentage of  CPU time spent servicing hardware interrupts.";
+    input {
+      leaf index {
+        type union {
+          type enumeration {
+            enum ALL {
+              description
+              "Get the percentage of CPU time spent servicing hardware interrupts.";
+            }
+          }
+          type uint32;
+        }
+        mandatory true;
+        description
+        "Use 'ALL' to query the information of all CPUs otherwise for the single core.";
+      }
+    }
+
+    output {
+      leaf hardware-interrupt {
+        type percentage;
+        description
+        "Percentage of CPU time spent servicing hardware interrupts.";
+      }
+    }
+  }
+
+  rpc get_cpu_software_interrupt {
+    description
+    "Return the percentage of  CPU time spent servicing software interrupts.";
+    input {
+      leaf index {
+        type union {
+          type enumeration {
+            enum ALL {
+              description
+              "Get the percentage of CPU time spent servicing software interrupts.";
+            }
+          }
+          type uint32;
+        }
+        mandatory true;
+        description
+        "Use 'ALL' to query the information of all CPUs otherwise for the single core.";
+      }
+    }
+
+    output {
+      leaf software-interrupt {
+        type percentage;
+        description
+        "Percentage of CPU time spent servicing software interrupts.";
+      }
+    }
+  }
+  
+}
+
+
+  
